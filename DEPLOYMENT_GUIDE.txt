@@ -1,0 +1,337 @@
+# TaskSher Application - Complete Deployment Guide
+
+## Overview
+This guide provides step-by-step instructions for deploying the TaskSher application, which consists of:
+- Frontend: React + Vite application
+- Backend: Node.js Express server
+- Database: Supabase (PostgreSQL)
+- Authentication: Supabase Auth with OAuth providers
+
+## Prerequisites
+Before starting deployment, ensure you have:
+- Node.js 18+ installed
+- Git installed
+- A Supabase account
+- A Netlify account (for frontend deployment)
+- A hosting service account for backend (Railway, Render, or Heroku)
+- Google Cloud Console account (for Google OAuth)
+- LinkedIn Developer account (for LinkedIn OAuth)
+
+## Part 1: Supabase Setup
+
+### 1.1 Create Supabase Project
+1. Go to https://supabase.com
+2. Sign up/Login to your account
+3. Click "New Project"
+4. Choose your organization
+5. Enter project name: "tasksher"
+6. Enter database password (save this securely)
+7. Choose region closest to your users
+8. Click "Create new project"
+
+### 1.2 Configure Authentication
+1. In Supabase dashboard, go to Authentication > Settings
+2. Under "Site URL", add your production domain: https://yourdomain.com
+3. Under "Redirect URLs", add:
+   - https://yourdomain.com/dashboard
+   - https://yourdomain.com/auth
+   - http://localhost:5173/dashboard (for local development)
+
+### 1.3 Setup OAuth Providers
+
+#### Google OAuth Setup:
+1. Go to Google Cloud Console (https://console.cloud.google.com)
+2. Create a new project or select existing one
+3. Enable Google+ API
+4. Go to Credentials > Create Credentials > OAuth 2.0 Client IDs
+5. Set application type to "Web application"
+6. Add authorized redirect URIs:
+   - https://[your-supabase-project-id].supabase.co/auth/v1/callback
+7. Copy Client ID and Client Secret
+8. In Supabase dashboard, go to Authentication > Providers
+9. Enable Google provider
+10. Enter Client ID and Client Secret
+11. Save configuration
+
+#### LinkedIn OAuth Setup:
+1. Go to LinkedIn Developer Portal (https://developer.linkedin.com)
+2. Create a new app
+3. Fill in app details
+4. In Auth tab, add redirect URLs:
+   - https://[your-supabase-project-id].supabase.co/auth/v1/callback
+5. Copy Client ID and Client Secret
+6. In Supabase dashboard, go to Authentication > Providers
+7. Enable LinkedIn (OIDC) provider
+8. Enter Client ID and Client Secret
+9. Save configuration
+
+### 1.4 Database Setup
+1. In Supabase dashboard, go to SQL Editor
+2. Run the migration file located at: supabase/migrations/20250627174445-e853323c-11cc-4e7c-a701-6a9fb55570a3.sql
+3. Verify tables are created in Database > Tables
+
+### 1.5 Get Environment Variables
+1. Go to Settings > API
+2. Copy the following values:
+   - Project URL
+   - Anon (public) key
+   - Service role key (keep this secret)
+
+## Part 2: Frontend Deployment (Netlify)
+
+### 2.1 Prepare Frontend for Production
+1. Create `.env.production` file in root directory:
+```
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+2. Update `vite.config.ts` if needed for production builds
+
+### 2.2 Deploy to Netlify
+1. Push your code to GitHub repository
+2. Go to Netlify (https://netlify.com)
+3. Click "New site from Git"
+4. Connect to GitHub and select your repository
+5. Configure build settings:
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+6. Add environment variables in Site settings > Environment variables:
+   - VITE_SUPABASE_URL
+   - VITE_SUPABASE_ANON_KEY
+7. Deploy site
+
+### 2.3 Configure Custom Domain (Optional)
+1. In Netlify dashboard, go to Domain settings
+2. Add custom domain
+3. Configure DNS records as instructed
+4. Enable HTTPS (automatic with Netlify)
+
+## Part 3: Backend Deployment
+
+### 3.1 Prepare Backend for Production
+1. Navigate to `server` directory
+2. Create `.env` file:
+```
+NODE_ENV=production
+PORT=3000
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-anon-key
+JWT_SECRET=your-jwt-secret-key
+FRONTEND_URL=https://your-netlify-domain.netlify.app
+```
+
+### 3.2 Deploy to Railway (Recommended)
+1. Go to Railway (https://railway.app)
+2. Sign up/Login with GitHub
+3. Click "New Project"
+4. Select "Deploy from GitHub repo"
+5. Choose your repository
+6. Configure service:
+   - Root directory: `server`
+   - Build command: `npm install`
+   - Start command: `npm start`
+7. Add environment variables from your `.env` file
+8. Deploy
+
+### 3.3 Alternative: Deploy to Render
+1. Go to Render (https://render.com)
+2. Create new Web Service
+3. Connect GitHub repository
+4. Configure:
+   - Root directory: `server`
+   - Build command: `npm install`
+   - Start command: `npm start`
+5. Add environment variables
+6. Deploy
+
+### 3.4 Alternative: Deploy to Heroku
+1. Install Heroku CLI
+2. Login: `heroku login`
+3. Create app: `heroku create tasksher-api`
+4. Set buildpack: `heroku buildpacks:set heroku/nodejs`
+5. Add environment variables:
+```bash
+heroku config:set NODE_ENV=production
+heroku config:set SUPABASE_URL=your-url
+heroku config:set SUPABASE_SERVICE_ROLE_KEY=your-key
+# ... add all other env vars
+```
+6. Deploy: `git push heroku main`
+
+## Part 4: Docker Deployment (Alternative)
+
+### 4.1 Backend Docker Deployment
+1. Navigate to `server` directory
+2. Build Docker image: `docker build -t tasksher-backend .`
+3. Run container: `docker run -p 3000:3000 --env-file .env tasksher-backend`
+
+### 4.2 Using Docker Compose
+1. Update `docker-compose.yml` with your environment variables
+2. Run: `docker-compose up -d`
+
+## Part 5: Environment Configuration
+
+### 5.1 Update Frontend Environment Variables
+After backend deployment, update frontend environment:
+```
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_API_URL=https://your-backend-domain.com
+```
+
+### 5.2 Update CORS Settings
+In your backend `server.js`, update CORS origins:
+```javascript
+const corsOptions = {
+  origin: [
+    'https://your-netlify-domain.netlify.app',
+    'https://your-custom-domain.com'
+  ],
+  credentials: true
+};
+```
+
+## Part 6: Post-Deployment Configuration
+
+### 6.1 Update Supabase Settings
+1. Update Site URL in Supabase to your production domain
+2. Add production redirect URLs
+3. Test authentication flows
+
+### 6.2 SSL/HTTPS Configuration
+- Netlify: Automatic HTTPS
+- Railway: Automatic HTTPS
+- Render: Automatic HTTPS
+- Custom servers: Configure SSL certificates
+
+### 6.3 Domain Configuration
+1. Point your domain to Netlify/hosting provider
+2. Update DNS records
+3. Configure SSL certificates
+4. Update all environment variables with new domain
+
+## Part 7: Testing Deployment
+
+### 7.1 Frontend Testing
+1. Visit your deployed frontend URL
+2. Test all pages load correctly
+3. Test authentication (email/password)
+4. Test OAuth providers (Google, LinkedIn)
+5. Test protected routes
+
+### 7.2 Backend Testing
+1. Test API endpoints
+2. Verify database connections
+3. Test authentication middleware
+4. Check CORS configuration
+
+### 7.3 Integration Testing
+1. Test frontend-backend communication
+2. Verify user registration/login flow
+3. Test data persistence
+4. Check error handling
+
+## Part 8: Monitoring and Maintenance
+
+### 8.1 Set Up Monitoring
+1. Enable Netlify analytics
+2. Set up backend monitoring (Railway/Render dashboards)
+3. Monitor Supabase usage and performance
+4. Set up error tracking (Sentry recommended)
+
+### 8.2 Backup Strategy
+1. Supabase automatic backups (check retention policy)
+2. Regular database exports
+3. Code repository backups
+
+### 8.3 Updates and Maintenance
+1. Regular dependency updates
+2. Security patches
+3. Performance monitoring
+4. User feedback integration
+
+## Part 9: Troubleshooting Common Issues
+
+### 9.1 Authentication Issues
+- Check OAuth provider configurations
+- Verify redirect URLs
+- Check environment variables
+- Test with different browsers
+
+### 9.2 CORS Issues
+- Update backend CORS settings
+- Check frontend API URLs
+- Verify environment variables
+
+### 9.3 Database Connection Issues
+- Check Supabase connection strings
+- Verify service role keys
+- Check network connectivity
+
+### 9.4 Build Issues
+- Check Node.js versions
+- Verify all dependencies
+- Check build commands
+- Review error logs
+
+## Part 10: Security Checklist
+
+### 10.1 Environment Variables
+- [ ] All sensitive keys in environment variables
+- [ ] No hardcoded secrets in code
+- [ ] Different keys for development/production
+
+### 10.2 Authentication
+- [ ] OAuth providers properly configured
+- [ ] Secure redirect URLs
+- [ ] JWT secrets are strong
+- [ ] Session management configured
+
+### 10.3 Database Security
+- [ ] Row Level Security (RLS) enabled
+- [ ] Proper access policies
+- [ ] Service role key secured
+- [ ] Regular security updates
+
+### 10.4 Network Security
+- [ ] HTTPS enabled everywhere
+- [ ] CORS properly configured
+- [ ] API rate limiting (if needed)
+- [ ] Input validation
+
+## Part 11: Performance Optimization
+
+### 11.1 Frontend Optimization
+- [ ] Code splitting implemented
+- [ ] Images optimized
+- [ ] Caching strategies
+- [ ] CDN configuration
+
+### 11.2 Backend Optimization
+- [ ] Database query optimization
+- [ ] Caching implementation
+- [ ] Connection pooling
+- [ ] Load balancing (if needed)
+
+## Support and Resources
+
+### Documentation Links
+- Supabase: https://supabase.com/docs
+- Netlify: https://docs.netlify.com
+- Railway: https://docs.railway.app
+- React: https://react.dev
+- Vite: https://vitejs.dev
+
+### Community Support
+- Supabase Discord
+- React Community
+- Stack Overflow
+- GitHub Issues
+
+## Conclusion
+
+This deployment guide covers all aspects of deploying the TaskSher application to production. Follow each section carefully and test thoroughly at each step. Remember to keep your environment variables secure and regularly update your dependencies for security and performance.
+
+For additional support or questions, refer to the documentation links provided or reach out to the respective community forums.
